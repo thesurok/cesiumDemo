@@ -1,1 +1,3 @@
-export const environment = {};
+export const environment = {
+    cesiumIonToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImdEc2F3UFltMUtlLVJhM1EiLCJqdGkiOiJmMGFiZWEyNi0zNzc1LTQ0NDEtOTQ2Yi1hYzgxYTA1MTk0MWUiLCJpZCI6NTQ3MTY2LCJpc3MiOiJodHRwczovL2FwaS5jZXNpdW0uY29tIiwiYXVkIjoidW5kZWZpbmVkX2RlZmF1bHQiLCJpYXQiOjE3OTQzOTUyMTB9.K_xca2QBwNc5A4dejJKjja-qnaeWoX52ELivzoMBSgM"
+};
