@@ -1,0 +1,7 @@
+@for (tool of tools; track tool.label){
+<button type="button" class="flex flex-col items-center rounded px-2 py-1 text-sm hover:opacity-85"
+    [class]="selectedTool === tool.name ? 'bg-teal-400' : 'bg-white/80'" (click)="selectTool(tool.name)">
+    <lucide-icon [name]="tool.icon" [size]="20" />
+    {{tool.label}}
+</button>
+}

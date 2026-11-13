@@ -1,0 +1,8 @@
+/* @import 'tailwindcss';
+
+@layer components {
+    .btn-tool {
+        @apply flex flex-col items-center rounded bg-white/80 px-2 py-1 text-sm hover:bg-sky-100;
+    }
+
+} */
