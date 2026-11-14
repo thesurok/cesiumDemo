@@ -4,7 +4,7 @@ import {
   viewChild,
   type OnInit,
 } from '@angular/core';
-import { Cartesian3, Ion, Math as CesiumMath, Viewer, Cesium3DTileset } from 'cesium';
+import { Cartesian3, Ion, Math as CesiumMath, Viewer, Cesium3DTileset, ScreenSpaceEventHandler, Cartesian2, ScreenSpaceEventType } from 'cesium';
 import { environment } from '../../environments/environment';
 import { ToolsPanel, type ToolName } from '../tools-panel/tools-panel';
 
@@ -22,10 +22,13 @@ type Cartesian3Coordinates = readonly [lon: number, lat: number, height: number]
 })
 export class CesiumContainer implements OnInit {
   container = viewChild.required<ElementRef<HTMLDivElement>>('cesiumContainer');
+  toolPanel = viewChild.required<ToolsPanel>('toolsPanel');
   viewer!: Viewer
   zeroCoordinates: Cartesian3Coordinates = [144.963, -37.814, 400]
   activeAreaRadius: number = 7000;
   center: Cartesian3 = Cartesian3.fromDegrees(...this.zeroCoordinates);
+  private screenSpaceEventHandler?: ScreenSpaceEventHandler;
+  selectedTool: ToolName = null;
 
   async ngOnInit() {
     this.initViewer();
@@ -104,7 +107,13 @@ export class CesiumContainer implements OnInit {
   }
 
   onToolSelected(toolName: ToolName): void {
+    if (this.selectedTool === toolName) {
+      return;
+    }
+    this.selectedTool = toolName;
     switch (toolName) {
+      case null: this.deselectAllTools();
+        break;
       case "pin": this.onPinSelected();
         break;
       case "ruler": this.onRulerSelected();
@@ -114,10 +123,23 @@ export class CesiumContainer implements OnInit {
   }
 
   onPinSelected(): void {
-    console.log("pin selected");
+    if (this.screenSpaceEventHandler) {
+      this.screenSpaceEventHandler.destroy();
+    }
+    this.screenSpaceEventHandler = new ScreenSpaceEventHandler(this.viewer.scene.canvas);
+    this.screenSpaceEventHandler.setInputAction((e: { position: Cartesian2 }) => {
+      const picked = this.viewer.scene.pick(e.position);
+      const position = this.viewer.scene.pickPosition(e.position);
+      const tile = picked?.content?.tile;
+      console.log(tile);
+    }, ScreenSpaceEventType.LEFT_CLICK);
   }
 
   onRulerSelected(): void {
-    console.log("ruler selected");
+
+  }
+
+  deselectAllTools(): void {
+
   }
 }

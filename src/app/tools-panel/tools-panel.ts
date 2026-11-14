@@ -1,7 +1,7 @@
 import { Component, output } from '@angular/core';
 import { LUCIDE_ICONS, LucideAngularModule, LucideIconProvider, MapPin, Ruler } from 'lucide-angular';
 
-export type ToolName = "ruler" | "pin";
+export type ToolName = "ruler" | "pin" | null;
 export type ToolEntry = { name: ToolName, label: string, icon: string };
 
 @Component({
@@ -25,7 +25,7 @@ export class ToolsPanel {
     { name: 'ruler', label: 'Ruler', icon: 'ruler' },
     { name: 'pin', label: 'Pin', icon: 'map-pin' }
   ]
-  selectedTool: ToolName | null = null;
+  selectedTool: ToolName = null;
 
   toolSelected = output<ToolName>();
 
@@ -36,6 +36,6 @@ export class ToolsPanel {
       this.selectedTool = toolName;
 
     }
-    this.toolSelected.emit(toolName);
+    this.toolSelected.emit(this.selectedTool);
   }
 }
