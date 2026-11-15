@@ -6,13 +6,12 @@ import {
   type OnInit,
   viewChildren
 } from '@angular/core';
-import { Cartesian3, Ion, Math as CesiumMath, Viewer, Cesium3DTileset, ScreenSpaceEventHandler, Cartesian2, ScreenSpaceEventType, type Scene } from 'cesium';
+import { Cartesian3, Ion, Math as CesiumMath, Viewer, Cesium3DTileset, ScreenSpaceEventHandler, Cartesian2, ScreenSpaceEventType, type Scene, Primitive, GeometryInstance, SphereGeometry, MaterialAppearance, Material, Color, Transforms } from 'cesium';
 import { environment } from '../../environments/environment';
 import { ToolsPanel, type ToolName } from '../tools-panel/tools-panel';
 import { MapPin, type MapPinData } from '../map-pin/map-pin';
 
-// Workers, Assets, ThirdParty, and Widgets are copied under cesium/ (see angular.json).
-// Follow <base href> so project sites such as GitHub Pages resolve /<repo>/cesium/.
+
 const baseHref = document.querySelector('base')?.getAttribute('href') ?? '/';
 const normalizedBase = baseHref.endsWith('/') ? baseHref : `${baseHref}/`;
 (globalThis as { CESIUM_BASE_URL?: string }).CESIUM_BASE_URL = `${normalizedBase}cesium/`;
@@ -118,37 +117,33 @@ export class CesiumContainer implements OnInit {
   }
 
   onToolSelected(toolName: ToolName): void {
-    if (this.selectedTool === toolName) {
-      return;
-    }
+    this.destroyScreenSpaceEventHandler();
     this.selectedTool = toolName;
     switch (toolName) {
-      case null: this.deselectAllTools();
-        break;
       case "pin": this.onPinSelected();
         break;
       case "ruler": this.onRulerSelected();
         break;
     }
+  }
 
+  private destroyScreenSpaceEventHandler(): void {
+    const handler = this.screenSpaceEventHandler;
+    this.screenSpaceEventHandler = undefined;
+    if (handler && !handler.isDestroyed()) {
+      handler.destroy();
+    }
   }
 
   onPinSelected(): void {
-    if (this.screenSpaceEventHandler) {
-      this.screenSpaceEventHandler.destroy();
-    }
     this.screenSpaceEventHandler = new ScreenSpaceEventHandler(this.viewer.scene.canvas);
     this.screenSpaceEventHandler.setInputAction(this.activePinToolClickHandler, ScreenSpaceEventType.LEFT_CLICK);
   }
 
   onRulerSelected(): void {
-
-  }
-
-  deselectAllTools(): void {
-    if (this.screenSpaceEventHandler) {
-      this.screenSpaceEventHandler.destroy();
-    }
+    console.log("ruler selected");
+    this.screenSpaceEventHandler = new ScreenSpaceEventHandler(this.viewer.scene.canvas);
+    this.screenSpaceEventHandler.setInputAction(this.activePointsRulerToolClickHandler, ScreenSpaceEventType.LEFT_CLICK)
   }
 
   activePinToolClickHandler = (e: { position: Cartesian2 }): void => {
@@ -160,6 +155,28 @@ export class CesiumContainer implements OnInit {
     // const xy = SceneTransforms.worldToWindowCoordinates(this.viewer.scene, position);
     // const tile = picked?.content?.tile;
     this.mapPins.update(pins => [...pins, { id: Math.random(), position }]);
+  }
+
+  activePointsRulerToolClickHandler = (e: { position: Cartesian2 }): void => {
+    const position: Cartesian3 = this.viewer.scene.pickPosition(e.position);
+    if (!position) {
+      return;
+    }
+
+    const sphere = this.viewer.scene.primitives.add(new Primitive({
+      geometryInstances: new GeometryInstance({
+        geometry: new SphereGeometry({
+          radius: 10
+        }),
+        modelMatrix: Transforms.eastNorthUpToFixedFrame(position)
+      }),
+      appearance: new MaterialAppearance({
+        material: Material.fromType('Color', {
+          color: Color.TEAL.withAlpha(0.6),
+        }),
+      }),
+    }));
+    console.log(sphere);
   }
 
   removeMapPin(id: number): void {
