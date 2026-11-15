@@ -1,15 +1,21 @@
 import {
   Component,
   ElementRef,
+  signal,
   viewChild,
   type OnInit,
+  viewChildren
 } from '@angular/core';
-import { Cartesian3, Ion, Math as CesiumMath, Viewer, Cesium3DTileset, ScreenSpaceEventHandler, Cartesian2, ScreenSpaceEventType } from 'cesium';
+import { Cartesian3, Ion, Math as CesiumMath, Viewer, Cesium3DTileset, ScreenSpaceEventHandler, Cartesian2, ScreenSpaceEventType, type Scene } from 'cesium';
 import { environment } from '../../environments/environment';
 import { ToolsPanel, type ToolName } from '../tools-panel/tools-panel';
+import { MapPin, type MapPinData } from '../map-pin/map-pin';
 
-// Workers, Assets, ThirdParty, and Widgets are served from /cesium (see angular.json).
-(globalThis as { CESIUM_BASE_URL?: string }).CESIUM_BASE_URL = '/cesium/';
+// Workers, Assets, ThirdParty, and Widgets are copied under cesium/ (see angular.json).
+// Follow <base href> so project sites such as GitHub Pages resolve /<repo>/cesium/.
+const baseHref = document.querySelector('base')?.getAttribute('href') ?? '/';
+const normalizedBase = baseHref.endsWith('/') ? baseHref : `${baseHref}/`;
+(globalThis as { CESIUM_BASE_URL?: string }).CESIUM_BASE_URL = `${normalizedBase}cesium/`;
 Ion.defaultAccessToken = environment.cesiumIonToken;
 
 type Cartesian3Coordinates = readonly [lon: number, lat: number, height: number];
@@ -18,7 +24,7 @@ type Cartesian3Coordinates = readonly [lon: number, lat: number, height: number]
   selector: 'app-cesium-container',
   templateUrl: './cesium-container.html',
   styleUrl: './cesium-container.css',
-  imports: [ToolsPanel]
+  imports: [ToolsPanel, MapPin]
 })
 export class CesiumContainer implements OnInit {
   container = viewChild.required<ElementRef<HTMLDivElement>>('cesiumContainer');
@@ -29,6 +35,9 @@ export class CesiumContainer implements OnInit {
   center: Cartesian3 = Cartesian3.fromDegrees(...this.zeroCoordinates);
   private screenSpaceEventHandler?: ScreenSpaceEventHandler;
   selectedTool: ToolName = null;
+  mapPins = signal<MapPinData[]>([]);
+  activeSceneMapPins = viewChildren(MapPin);
+
 
   async ngOnInit() {
     this.initViewer();
@@ -51,6 +60,7 @@ export class CesiumContainer implements OnInit {
     });
 
     this.viewer.bottomContainer.setAttribute("style", "display:none");
+    this.viewer.scene.preRender.addEventListener(this.onSceneUpdate);
   }
 
   async loadTileset(): Promise<void> {
@@ -82,8 +92,9 @@ export class CesiumContainer implements OnInit {
   }
 
   onInitialCameraFlyComplete = (): void => {
+    // this.mapPins.update(pins => [...pins, { id: 1, lon: 0, lat: 1, height: 1 }]);
     this.enableCameraControls(true);
-    this.establishRestrictedCameraControls()
+    this.establishRestrictedCameraControls();
   }
 
   establishRestrictedCameraControls(): void {
@@ -127,12 +138,7 @@ export class CesiumContainer implements OnInit {
       this.screenSpaceEventHandler.destroy();
     }
     this.screenSpaceEventHandler = new ScreenSpaceEventHandler(this.viewer.scene.canvas);
-    this.screenSpaceEventHandler.setInputAction((e: { position: Cartesian2 }) => {
-      const picked = this.viewer.scene.pick(e.position);
-      const position = this.viewer.scene.pickPosition(e.position);
-      const tile = picked?.content?.tile;
-      console.log(tile);
-    }, ScreenSpaceEventType.LEFT_CLICK);
+    this.screenSpaceEventHandler.setInputAction(this.activePinToolClickHandler, ScreenSpaceEventType.LEFT_CLICK);
   }
 
   onRulerSelected(): void {
@@ -140,6 +146,33 @@ export class CesiumContainer implements OnInit {
   }
 
   deselectAllTools(): void {
+    if (this.screenSpaceEventHandler) {
+      this.screenSpaceEventHandler.destroy();
+    }
+  }
 
+  activePinToolClickHandler = (e: { position: Cartesian2 }): void => {
+    // const picked = this.viewer.scene.pick(e.position);
+    const position: Cartesian3 = this.viewer.scene.pickPosition(e.position);
+    if (!position) {
+      return;
+    }
+    // const xy = SceneTransforms.worldToWindowCoordinates(this.viewer.scene, position);
+    // const tile = picked?.content?.tile;
+    this.mapPins.update(pins => [...pins, { id: Math.random(), position }]);
+  }
+
+  removeMapPin(id: number): void {
+    this.mapPins.update(pins => pins.filter(pin => pin.id !== id));
+  }
+
+  onSceneUpdate = (scene: Scene): void => {
+    this.syncMapPinsPositions();
+  }
+
+  syncMapPinsPositions(): void {
+    this.activeSceneMapPins().forEach(pin => {
+      pin.updateScreenPosition(this.viewer.scene);
+    });
   }
 }

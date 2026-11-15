@@ -1,2 +1,5 @@
 <div #cesiumContainer class="cesium-container"></div>
 <app-tools-panel #toolsPanel (toolSelected)="onToolSelected($event)" />
+@for (mapPin of mapPins(); track mapPin.id) {
+<app-map-pin [data]="mapPin" (removed)="removeMapPin($event)" />
+}

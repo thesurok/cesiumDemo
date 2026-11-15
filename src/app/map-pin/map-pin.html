@@ -1,1 +1,9 @@
-<p>map-pin works!</p>
+<div class="card">
+  <button type="button" class="close" aria-label="Remove pin" (click)="requestRemove()">
+    <lucide-icon name="x" [size]="14" />
+  </button>
+  <textarea class="description" rows="2" placeholder="Description" [(ngModel)]="description"></textarea>
+</div>
+<div class="marker">
+  <lucide-icon name="map-pin" [size]="22" />
+</div>

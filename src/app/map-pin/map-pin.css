@@ -1,0 +1,75 @@
+:host {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 5;
+  display: block;
+  width: max-content;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.card {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 6px);
+  box-sizing: border-box;
+  width: 11rem;
+  padding: 0.35rem 1.35rem 0.35rem 0.5rem;
+  border-radius: 0.5rem;
+  background: rgb(255 255 255 / 0.95);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.35);
+  pointer-events: auto;
+  transform: translateX(-50%);
+}
+
+.close {
+  position: absolute;
+  top: 0.15rem;
+  right: 0.15rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0.25rem;
+  background: transparent;
+  color: rgb(71 85 105);
+  cursor: pointer;
+}
+
+.close:hover {
+  background: rgb(241 245 249);
+  color: rgb(15 23 42);
+}
+
+.description {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  resize: vertical;
+  background: transparent;
+  color: rgb(15 23 42);
+  font: inherit;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  outline: none;
+}
+
+.marker {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999px;
+  background: white;
+  color: rgb(13 148 136);
+  line-height: 0;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.35);
+  pointer-events: auto;
+}

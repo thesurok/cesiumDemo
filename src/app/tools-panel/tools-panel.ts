@@ -2,7 +2,7 @@ import { Component, output } from '@angular/core';
 import { LUCIDE_ICONS, LucideAngularModule, LucideIconProvider, MapPin, Ruler } from 'lucide-angular';
 
 export type ToolName = "ruler" | "pin" | null;
-export type ToolEntry = { name: ToolName, label: string, icon: string };
+export interface ToolEntry { name: ToolName, label: string, icon: string };
 
 @Component({
   selector: 'app-tools-panel',
