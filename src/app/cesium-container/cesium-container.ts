@@ -1,15 +1,17 @@
 import {
   Component,
   ElementRef,
+  HostListener,
   signal,
   viewChild,
   type OnInit,
   viewChildren
 } from '@angular/core';
-import { Cartesian3, Ion, Math as CesiumMath, Viewer, Cesium3DTileset, ScreenSpaceEventHandler, Cartesian2, ScreenSpaceEventType, type Scene, Primitive, GeometryInstance, SphereGeometry, MaterialAppearance, Material, Color, Transforms } from 'cesium';
+import { Cartesian3, Ion, Math as CesiumMath, Viewer, Cesium3DTileset, ScreenSpaceEventHandler, Cartesian2, ScreenSpaceEventType, type Scene } from 'cesium';
 import { environment } from '../../environments/environment';
 import { ToolsPanel, type ToolName } from '../tools-panel/tools-panel';
 import { MapPin, type MapPinData } from '../map-pin/map-pin';
+import { PointsRuler } from '../points-ruler/points-ruler';
 
 
 const baseHref = document.querySelector('base')?.getAttribute('href') ?? '/';
@@ -33,6 +35,8 @@ export class CesiumContainer implements OnInit {
   activeAreaRadius: number = 7000;
   center: Cartesian3 = Cartesian3.fromDegrees(...this.zeroCoordinates);
   private screenSpaceEventHandler?: ScreenSpaceEventHandler;
+  private readonly rulers: PointsRuler[] = [];
+  private activeRuler?: PointsRuler;
   selectedTool: ToolName = null;
   mapPins = signal<MapPinData[]>([]);
   activeSceneMapPins = viewChildren(MapPin);
@@ -59,6 +63,7 @@ export class CesiumContainer implements OnInit {
     });
 
     this.viewer.bottomContainer.setAttribute("style", "display:none");
+    this.viewer.scene.canvas.addEventListener('contextmenu', (event) => event.preventDefault());
     this.viewer.scene.preRender.addEventListener(this.onSceneUpdate);
   }
 
@@ -117,6 +122,7 @@ export class CesiumContainer implements OnInit {
   }
 
   onToolSelected(toolName: ToolName): void {
+    this.finishActiveRuler();
     this.destroyScreenSpaceEventHandler();
     this.selectedTool = toolName;
     switch (toolName) {
@@ -141,9 +147,9 @@ export class CesiumContainer implements OnInit {
   }
 
   onRulerSelected(): void {
-    console.log("ruler selected");
     this.screenSpaceEventHandler = new ScreenSpaceEventHandler(this.viewer.scene.canvas);
-    this.screenSpaceEventHandler.setInputAction(this.activePointsRulerToolClickHandler, ScreenSpaceEventType.LEFT_CLICK)
+    this.screenSpaceEventHandler.setInputAction(this.activePointsRulerToolClickHandler, ScreenSpaceEventType.LEFT_CLICK);
+    this.screenSpaceEventHandler.setInputAction(this.finishActiveRuler, ScreenSpaceEventType.RIGHT_CLICK);
   }
 
   activePinToolClickHandler = (e: { position: Cartesian2 }): void => {
@@ -162,21 +168,58 @@ export class CesiumContainer implements OnInit {
     if (!position) {
       return;
     }
+    if (!this.activeRuler) {
+      this.activeRuler = new PointsRuler(this.viewer);
+      this.rulers.push(this.activeRuler);
+    }
+    this.activeRuler.addPoint(position);
+  }
 
-    const sphere = this.viewer.scene.primitives.add(new Primitive({
-      geometryInstances: new GeometryInstance({
-        geometry: new SphereGeometry({
-          radius: 10
-        }),
-        modelMatrix: Transforms.eastNorthUpToFixedFrame(position)
-      }),
-      appearance: new MaterialAppearance({
-        material: Material.fromType('Color', {
-          color: Color.TEAL.withAlpha(0.6),
-        }),
-      }),
-    }));
-    console.log(sphere);
+  finishActiveRuler = (): void => {
+    if (this.activeRuler && this.activeRuler.points.length < 2) {
+      this.discardActiveRuler();
+    }
+    this.activeRuler = undefined;
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  undoRulerPoint(event: KeyboardEvent): void {
+    if (this.selectedTool !== 'ruler' || !this.isUndoShortcut(event) || this.isTypingTarget(event.target)) {
+      return;
+    }
+    event.preventDefault();
+    if (!this.activeRuler) {
+      this.activeRuler = this.rulers.at(-1);
+    }
+    if (!this.activeRuler?.undoPoint()) {
+      this.activeRuler = undefined;
+      return;
+    }
+    if (this.activeRuler.points.length === 0) {
+      this.discardActiveRuler();
+    }
+  }
+
+  private isUndoShortcut(event: KeyboardEvent): boolean {
+    return event.ctrlKey && !event.shiftKey && !event.altKey && event.code === 'KeyZ';
+  }
+
+  private isTypingTarget(target: EventTarget | null): boolean {
+    return target instanceof HTMLInputElement
+      || target instanceof HTMLTextAreaElement
+      || (target instanceof HTMLElement && target.isContentEditable);
+  }
+
+  private discardActiveRuler(): void {
+    if (!this.activeRuler) {
+      return;
+    }
+    this.activeRuler.destroy();
+    const index = this.rulers.indexOf(this.activeRuler);
+    if (index !== -1) {
+      this.rulers.splice(index, 1);
+    }
+    this.activeRuler = undefined;
   }
 
   removeMapPin(id: number): void {
